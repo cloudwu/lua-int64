@@ -1,7 +1,6 @@
 #include <lua.h>
 #include <lauxlib.h>
 #include <stdint.h>
-#include <string.h>
 
 static int64_t
 _int64(lua_State *L, int index) {
