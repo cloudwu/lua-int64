@@ -13,9 +13,6 @@ _int64(lua_State *L, int index) {
 		n = (int64_t)d;
 		break;
 	}
-	case LUA_TNIL:
-		n = 0;
-		break;
 	case LUA_TSTRING: {
 		size_t len = 0;
 		uint8_t * str = (uint8_t *)lua_tolstring(L, index, &len);
@@ -132,6 +129,10 @@ int64_unm(lua_State *L) {
 
 static int
 int64_new(lua_State *L) {
+	if (lua_gettop(L) == 0) {
+		lua_pushlightuserdata(L,NULL);
+		return 1;
+	}
 	int64_t n = _int64(L,1);
 	_pushint64(L,n);
 	return 1;
