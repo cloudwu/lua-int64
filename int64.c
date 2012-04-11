@@ -1,6 +1,7 @@
 #include <lua.h>
 #include <lauxlib.h>
 #include <stdint.h>
+#include <math.h>
 
 static int64_t
 _int64(lua_State *L, int index) {
@@ -94,20 +95,29 @@ int64_mod(lua_State *L) {
 
 static int64_t
 _pow64(int64_t a, int64_t b) {
-	if (b == 0)
-		return 1;
-	if (b == 1)
+	if (b == 1) {
 		return a;
+	}
 	int64_t a2 = a * a;
-	return _pow64(a2 , b/2) * _pow64(a2 , b%2);
+	if (b % 2 == 1) {
+		return _pow64(a2, b/2) * a;
+	} else {
+		return _pow64(a2, b/2);
+	}
 }
 
 static int
 int64_pow(lua_State *L) {
 	int64_t a = _int64(L,1);
 	int64_t b = _int64(L,2);
-
-	int64_t p = _pow64(a,b);
+	int64_t p;
+	if (b > 0) {
+		p = _pow64(a,b);
+	} else if (b == 0) {
+		p = 1;
+	} else {
+		return luaL_error(L, "pow by nagtive number %d",(int)b);
+	} 
 	_pushint64(L, p);
 
 	return 1;
