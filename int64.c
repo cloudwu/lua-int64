@@ -75,7 +75,7 @@ int64_div(lua_State *L) {
 	if (b == 0) {
 		return luaL_error(L, "div by zero");
 	}
-	_pushint64(L, a * b);
+	_pushint64(L, a / b);
 	
 	return 1;
 }
