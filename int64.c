@@ -27,7 +27,7 @@ _int64(lua_State *L, int index) {
 	}
 	case LUA_TLIGHTUSERDATA: {
 		void * p = lua_touserdata(L,index);
-		memcpy(&n , &p , sizeof(p));
+		n = (intptr_t)p;
 		break;
 	}
 	default:
@@ -38,8 +38,7 @@ _int64(lua_State *L, int index) {
 
 static void
 _pushint64(lua_State *L, int64_t n) {
-	void * p = NULL;
-	memcpy(&p, &n , sizeof(p));
+	void * p = (void *)(intptr_t)n;
 	lua_pushlightuserdata(L,p);
 }
 
@@ -183,7 +182,7 @@ make_mt(lua_State *L) {
 
 int
 luaopen_int64(lua_State *L) {
-	if (sizeof(void *)!=sizeof(int64_t)) {
+	if (sizeof(intptr_t)!=sizeof(int64_t)) {
 		return luaL_error(L, "Only support 64bit architecture");
 	}
 	lua_pushlightuserdata(L,NULL);
