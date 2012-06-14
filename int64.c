@@ -35,7 +35,7 @@ _int64(lua_State *L, int index) {
 	return n;
 }
 
-static void
+static inline void
 _pushint64(lua_State *L, int64_t n) {
 	void * p = (void *)(intptr_t)n;
 	lua_pushlightuserdata(L,p);
