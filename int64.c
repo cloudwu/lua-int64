@@ -148,6 +148,7 @@ int64_new(lua_State *L) {
 			}
 			const char * str = lua_tostring(L, 1);
 			n = strtoll(str, NULL, base);
+			_pushint64(L,n);
 			break;
 		}
 	}
