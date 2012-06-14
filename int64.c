@@ -2,6 +2,8 @@
 #include <lauxlib.h>
 #include <stdint.h>
 #include <math.h>
+#include <stdlib.h>
+#include <stdbool.h>
 
 static int64_t
 _int64(lua_State *L, int index) {
@@ -15,7 +17,7 @@ _int64(lua_State *L, int index) {
 	}
 	case LUA_TSTRING: {
 		size_t len = 0;
-		uint8_t * str = (uint8_t *)lua_tolstring(L, index, &len);
+		const uint8_t * str = (const uint8_t *)lua_tolstring(L, index, &len);
 		int i = 0;
 		for (i=0;i<(int)len;i++) {
 			n = (n << 8) | str[i];
@@ -129,12 +131,26 @@ int64_unm(lua_State *L) {
 
 static int
 int64_new(lua_State *L) {
-	if (lua_gettop(L) == 0) {
-		lua_pushlightuserdata(L,NULL);
-		return 1;
+	int top = lua_gettop(L);
+	int64_t n;
+	switch(top) {
+		case 0 : 
+			lua_pushlightuserdata(L,NULL);
+			break;
+		case 1 :
+			n = _int64(L,1);
+			_pushint64(L,n);
+			break;
+		default: {
+			int base = luaL_checkinteger(L,2);
+			if (base < 2) {
+				luaL_error(L, "base must be >= 2");
+			}
+			const char * str = lua_tostring(L, 1);
+			n = strtoll(str, NULL, base);
+			break;
+		}
 	}
-	int64_t n = _int64(L,1);
-	_pushint64(L,n);
 	return 1;
 }
 
@@ -171,6 +187,90 @@ int64_len(lua_State *L) {
 	return 1;
 }
 
+static int
+tostring(lua_State *L) {
+	static char hex[16] = "0123456789ABCDEF";
+	uintptr_t n = (uintptr_t)lua_touserdata(L,1);
+	if (lua_gettop(L) == 1) {
+		luaL_Buffer b;
+		luaL_buffinitsize(L , &b , 28);
+		luaL_addstring(&b, "int64: 0x");
+		int i;
+		bool strip = true;
+		for (i=15;i>=0;i--) {
+			int c = (n >> (i*4)) & 0xf;
+			if (strip && c ==0) {
+				continue;
+			}
+			strip = false;
+			luaL_addchar(&b, hex[c]);
+		}
+		if (strip) {
+			luaL_addchar(&b , '0');
+		}
+		luaL_pushresult(&b);
+	} else {
+		int base = luaL_checkinteger(L,2);
+		int shift , mask;
+		switch(base) {
+		case 0: {
+			unsigned char buffer[8];
+			int i;
+			for (i=0;i<16;i++) {
+				buffer[i] = (n >> (i*4)) & 0xff;
+			}
+			lua_pushlstring(L,(const char *)buffer, 8);
+			return 1;
+			}
+		case 10: {
+			int64_t dec = (int64_t)n;
+			luaL_Buffer b;
+			luaL_buffinitsize(L , &b , 28);
+			if (dec<0) {
+				luaL_addchar(&b, '-');
+				dec = -dec;
+			}
+			int buffer[32];
+			int i;
+			for (i=0;i<32;i++) {
+				buffer[i] = dec%10;
+				dec /= 10;
+				if (dec == 0)
+					break;
+			}
+			while (i>=0) {
+				luaL_addchar(&b, hex[buffer[i]]);
+				--i;
+			}
+			luaL_pushresult(&b);
+			return 1;
+		}
+		case 2:
+			shift = 1;
+			mask = 1;
+			break;
+		case 8:
+			shift = 3;
+			mask = 7;
+			break;
+		case 16:
+			shift = 4;
+			mask = 0xf;
+			break;
+		default:
+			luaL_error(L, "Unsupport base %d",base);
+			break;
+		}
+		int i;
+		char buffer[64];
+		for (i=0;i<64;i+=shift) {
+			buffer[i/shift] = hex[(n>>(64-shift-i)) & mask];
+		}
+		lua_pushlstring(L, buffer, 64 / shift);
+	}
+	return 1;
+}
+
 static void
 make_mt(lua_State *L) {
 	luaL_Reg lib[] = {
@@ -185,6 +285,7 @@ make_mt(lua_State *L) {
 		{ "__lt", int64_lt },
 		{ "__le", int64_le },
 		{ "__len", int64_len },
+		{ "__tostring", tostring },
 		{ NULL, NULL },
 	};
 	luaL_newlib(L,lib);
@@ -200,7 +301,12 @@ luaopen_int64(lua_State *L) {
 	lua_setmetatable(L,-2);
 	lua_pop(L,1);
 
-	lua_pushcfunction(L, int64_new);	
+	lua_newtable(L);
+	lua_pushcfunction(L, int64_new);
+	lua_setfield(L, -2, "new");
+	lua_pushcfunction(L, tostring);
+	lua_setfield(L, -2, "tostring");
+
 	return 1;
 }
 
