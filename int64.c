@@ -18,10 +18,15 @@ _int64(lua_State *L, int index) {
 	case LUA_TSTRING: {
 		size_t len = 0;
 		const uint8_t * str = (const uint8_t *)lua_tolstring(L, index, &len);
-		int i = 0;
-		for (i=0;i<(int)len;i++) {
-			n = (n << 8) | str[i];
+		if (len>8) {
+			return luaL_error(L, "The string (length = %d) is not an int64 string", len);
 		}
+		int i = 0;
+		uint64_t n64 = 0;
+		for (i=0;i<(int)len;i++) {
+			n64 |= (uint64_t)str[i] << (i*8);
+		}
+		n = (int64_t)n64;
 		break;
 	}
 	case LUA_TLIGHTUSERDATA: {
