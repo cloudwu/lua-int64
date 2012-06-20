@@ -222,8 +222,8 @@ tostring(lua_State *L) {
 		case 0: {
 			unsigned char buffer[8];
 			int i;
-			for (i=0;i<16;i++) {
-				buffer[i] = (n >> (i*4)) & 0xff;
+			for (i=0;i<8;i++) {
+				buffer[i] = (n >> (i*8)) & 0xff;
 			}
 			lua_pushlstring(L,(const char *)buffer, 8);
 			return 1;
